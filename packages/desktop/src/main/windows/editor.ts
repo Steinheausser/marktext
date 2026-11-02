@@ -6,7 +6,7 @@ import { isChildOfDirectory } from 'common/filesystem/paths'
 import BaseWindow, { WindowLifecycle, WindowType } from './base'
 import type Accessor from '../app/accessor'
 import { zoomIn, zoomOut } from './utils'
-import { TITLE_BAR_HEIGHT, editorWinOptions, isLinux, isOsx } from '../config'
+import { TITLE_BAR_HEIGHT, editorWinOptions, isLinux, isOsx, isWindows } from '../config'
 import { showEditorContextMenu } from '../contextMenu/editor'
 import { switchLanguage } from '../spellchecker'
 import type { TabOptions } from '@shared/types/files'
@@ -74,6 +74,10 @@ class EditorWindow extends BaseWindow {
       winOptions.titleBarStyle = 'default'
       if (titleBarStyle === 'native') {
         winOptions.frame = true
+      } else if (isWindows) {
+        // Without WS_THICKFRAME, DWM no longer draws its window border over
+        // the edges of the frameless client area.
+        winOptions.thickFrame = false
       }
     }
 

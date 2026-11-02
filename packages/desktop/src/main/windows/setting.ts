@@ -5,7 +5,7 @@ import { electronLocalshortcut } from 'common/localShortcut'
 import BaseWindow, { WindowLifecycle, WindowType, type EnvLike, type PreferenceLike } from './base'
 import type Accessor from '../app/accessor'
 import { centerWindowOptions } from './utils'
-import { TITLE_BAR_HEIGHT, preferencesWinOptions, isLinux, isOsx } from '../config'
+import { TITLE_BAR_HEIGHT, preferencesWinOptions, isLinux, isOsx, isWindows } from '../config'
 import log from 'electron-log'
 
 class SettingWindow extends BaseWindow {
@@ -41,6 +41,10 @@ class SettingWindow extends BaseWindow {
       winOptions.titleBarStyle = 'default'
       if (titleBarStyle === 'native') {
         winOptions.frame = true
+      } else if (isWindows) {
+        // Without WS_THICKFRAME, DWM no longer draws its window border over
+        // the edges of the frameless client area.
+        winOptions.thickFrame = false
       }
     }
 
