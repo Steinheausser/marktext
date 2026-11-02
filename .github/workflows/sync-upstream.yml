@@ -1,0 +1,52 @@
+name: Sync upstream
+
+# Keeps this fork's develop branch up to date with marktext/marktext by
+# merging upstream/develop into it, so local patches stay on top.
+
+on:
+  schedule:
+    - cron: '17 6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync-upstream
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    # Never run in the upstream repository itself.
+    if: github.repository != 'marktext/marktext'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: develop
+          fetch-depth: 0
+          # GITHUB_TOKEN cannot push commits that touch .github/workflows.
+          # Upstream changes its workflows regularly, so provide a token with
+          # the "workflow" scope (classic PAT) or "Workflows: write"
+          # (fine-grained PAT) as the SYNC_TOKEN secret.
+          token: ${{ secrets.SYNC_TOKEN || github.token }}
+
+      - name: Merge upstream/develop
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git remote add upstream https://github.com/marktext/marktext.git
+          git fetch --no-tags upstream develop
+
+          if git merge-base --is-ancestor upstream/develop HEAD; then
+            echo "Already up to date with upstream."
+            exit 0
+          fi
+
+          if ! git merge --no-edit upstream/develop; then
+            git merge --abort
+            echo "::error::Merge conflict with upstream/develop. Resolve it manually."
+            exit 1
+          fi
+
+          git push origin HEAD:develop
