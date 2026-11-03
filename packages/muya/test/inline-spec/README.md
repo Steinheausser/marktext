@@ -1,6 +1,6 @@
 # Live inline lexer / specification differences
 
-This suite calls `src/inlineRenderer/lexer.ts` directly. It is independent of
+This suite calls `src/inline/lexer.ts` directly. It is independent of
 `test/spec/`, which measures the marked-based HTML export path. A green run means
 the live lexer's differences match the reviewed baseline, not 100% conformance.
 
@@ -23,6 +23,12 @@ CommonMark examples come from the pinned `commonmark-spec@0.31.2` dependency. GF
 examples reuse the repository's `gfm-spec-0.29-gfm.json`. All inline sections plus
 backslash escapes and entities are selected: 356 CommonMark and 366 GFM examples.
 Tables, task lists and other block sections are outside this suite's denominator.
+The fixtures' visible tab notation (`→`) is converted to U+0009 in source and
+expected HTML, matching the official `spec.json` representation.
+The pinned GFM snapshot includes FTP in example 628; the
+[current published URL grammar](https://github.github.com/gfm/#autolinks-extension-)
+omits it. FTP recognition is retained for snapshot compatibility, rather than
+claimed as a requirement of the current published grammar.
 
 `marked.Lexer.blockTokens` provides paragraph/heading boundaries and raw reference
 definitions. Its inline tokens, parsed links and rendered HTML are never used to
@@ -33,6 +39,11 @@ multiple paragraphs and reference context are supported. Code blocks, HTML
 blocks, lists and other unimplemented block shapes are explicitly `uncovered`.
 Disagreements between the adapter's block envelopes and the official HTML are
 also uncovered instead of being attributed to the inline lexer.
+
+The adapter applies the production Tab-separator compatibility extension for
+reference definitions. Issue #5968 also has explicit link/image regressions in
+`links.spec.ts`: the official corpus has no definition with a Tab between its
+destination and title. These extra cases are outside the official totals.
 
 The profile disables optional math, footnotes, superscript/subscript, highlighting
 and inline-diff syntax. The current lexer cannot disable bare autolinks,

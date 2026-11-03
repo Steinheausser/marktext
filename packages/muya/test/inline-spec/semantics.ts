@@ -1,8 +1,9 @@
 import type { Token as HtmlToken } from 'parse5';
-import type { Labels, ReferenceImageToken, ReferenceLinkToken, Token } from '../../src/inlineRenderer/types';
+import type { Labels, ReferenceImageToken, ReferenceLinkToken, Token } from '../../src/inline/model/types';
 import { escapeAttribute, escapeText } from 'entities';
 import { Tokenizer } from 'parse5';
-import escapeCharactersMap from '../../src/config/escapeCharacter';
+import { VOID_HTML_TAGS } from '../../src/config';
+import { normalizeReferenceLabel } from '../../src/inline/referenceLabel';
 
 export type SemanticEvent
     = | { type: 'open'; tag: string; attrs: Array<[string, string]>; selfClosing?: true }
@@ -12,7 +13,7 @@ export type SemanticEvent
         | { type: 'comment'; value: string }
         | { type: 'doctype'; name: string | null; publicId: string | null; systemId: string | null };
 
-const VOID_TAGS = new Set(['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'param', 'source', 'track', 'wbr']);
+const VOID_TAGS = new Set<string>(VOID_HTML_TAGS);
 const BLOCK_TAG = /^(?:p|h[1-6])$/;
 
 function canonicalUrl(value: string): string {
@@ -115,12 +116,12 @@ function image(src: string, title: string, alt: string): string {
 }
 
 function referenceHtml(token: ReferenceLinkToken | ReferenceImageToken, labels: Labels, children: string): string {
-    const definition = labels.get((token.label + token.backlash.second).toLowerCase());
+    const definition = labels.get(normalizeReferenceLabel(token.label + token.backlash.second));
     if (!definition)
         throw new Error(`Unresolved reference token: ${token.raw}`);
     return token.type === 'reference_link'
         ? link(definition.href, definition.title, children)
-        : image(definition.href, definition.title, token.alt);
+        : image(definition.href, definition.title, token.attrs.alt);
 }
 
 function leafHtml(token: Token, literalExtensions: boolean): string | undefined {
@@ -130,7 +131,7 @@ function leafHtml(token: Token, literalExtensions: boolean): string | undefined 
         case 'backlash':
             return escapeText(token.raw.slice(token.marker.length));
         case 'html_escape':
-            return escapeText(escapeCharactersMap[token.escapeCharacter] ?? token.raw);
+            return escapeText(token.content);
         case 'inline_code':
             return `<code>${escapeText(token.content)}</code>`;
         case 'soft_line_break':
@@ -165,7 +166,7 @@ export function tokensToHtml(tokens: Token[], labels: Labels, literalExtensions 
             case 'link':
                 return link(token.href, token.title, children);
             case 'image':
-                return image(token.attrs.src, token.title, token.alt);
+                return image(token.attrs.src, token.title, token.attrs.alt);
             case 'reference_link':
             case 'reference_image':
                 return referenceHtml(token, labels, children);
